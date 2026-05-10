@@ -62,7 +62,7 @@ function getTheme() {
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   if (themeToggleBtn) {
-    themeToggleBtn.textContent = theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด';
+    themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
   }
 }
 
