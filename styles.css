@@ -173,7 +173,7 @@ button {
   gap: 24px;
 }
 
-..add-item-panel,
+.add-item-panel,
 .inventory-panel {
   background: var(--panel-bg);
   border: 1px solid var(--border);

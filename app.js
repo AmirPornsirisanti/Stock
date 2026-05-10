@@ -1,3 +1,5 @@
+const API_BASE = 'http://localhost:5000/api';
+
 const loginTab = document.getElementById('loginTab');
 const registerTab = document.getElementById('registerTab');
 const loginForm = document.getElementById('loginForm');
@@ -30,29 +32,19 @@ const themeToggleBtn = document.getElementById('themeToggleBtn');
 
 let editingItemId = null;
 
-const USERS_KEY = 'stockManagerUsers';
-const CURRENT_USER_KEY = 'stockManagerCurrentUser';
+const TOKEN_KEY = 'stockManagerToken';
 const THEME_KEY = 'stockManagerTheme';
 
-function getUsers() {
-  const stored = localStorage.getItem(USERS_KEY);
-  return stored ? JSON.parse(stored) : [];
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+function setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
 }
 
-function getCurrentUser() {
-  return localStorage.getItem(CURRENT_USER_KEY);
-}
-
-function setCurrentUser(username) {
-  if (username) {
-    localStorage.setItem(CURRENT_USER_KEY, username);
-  } else {
-    localStorage.removeItem(CURRENT_USER_KEY);
-  }
+function removeToken() {
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 function getTheme() {
@@ -75,14 +67,24 @@ function toggleTheme() {
   setTheme(getTheme() === 'dark' ? 'light' : 'dark');
 }
 
-function getInventory(username) {
-  const data = localStorage.getItem(`stockManagerData_${username}`);
-  if (!data) return [];
-  return JSON.parse(data);
-}
-
-function saveInventory(username, items) {
-  localStorage.setItem(`stockManagerData_${username}`, JSON.stringify(items));
+async function apiRequest(url, options = {}) {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  if (token) {
+    headers.Authorization = token;
+  }
+  const response = await fetch(`${API_BASE}${url}`, {
+    ...options,
+    headers,
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || 'Something went wrong');
+  }
+  return data;
 }
 
 function switchTab(activeTab) {
@@ -99,11 +101,10 @@ function switchTab(activeTab) {
   }
 }
 
-function showStockView() {
+function showStockView(user) {
   authSection.classList.add('hidden');
   stockSection.classList.remove('hidden');
-  const currentUser = getCurrentUser();
-  welcomeUser.textContent = `ยินดีต้อนรับ ${currentUser}`;
+  welcomeUser.textContent = `ยินดีต้อนรับ ${user.username}`;
   renderInventory();
 }
 
@@ -116,32 +117,34 @@ function showAuthView() {
   clearItemForm();
 }
 
-function renderInventory() {
-  const currentUser = getCurrentUser();
-  if (!currentUser) return;
+async function renderInventory() {
+  try {
+    const products = await apiRequest('/products');
+    inventoryBody.innerHTML = '';
 
-  const inventory = getInventory(currentUser);
-  inventoryBody.innerHTML = '';
+    if (products.length === 0) {
+      inventoryBody.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">ยังไม่มีสินค้าคงคลัง</td></tr>';
+      return;
+    }
 
-  if (inventory.length === 0) {
-    inventoryBody.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">ยังไม่มีสินค้าคงคลัง</td></tr>';
-    return;
+    products.forEach((item) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.quantity}</td>
+        <td>${item.price.toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}</td>
+        <td>${item.category}</td>
+        <td>
+          <button class="edit" data-id="${item._id}">แก้ไข</button>
+          <button class="delete" data-id="${item._id}">ลบ</button>
+        </td>
+      `;
+      inventoryBody.appendChild(row);
+    });
+  } catch (err) {
+    console.error(err);
+    inventoryBody.innerHTML = '<tr><td colspan="5" style="color: var(--error);">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
   }
-
-  inventory.forEach((item) => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${item.name}</td>
-      <td>${item.quantity}</td>
-      <td>${item.price.toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}</td>
-      <td>${item.category}</td>
-      <td>
-        <button class="edit" data-id="${item.id}">แก้ไข</button>
-        <button class="delete" data-id="${item.id}">ลบ</button>
-      </td>
-    `;
-    inventoryBody.appendChild(row);
-  });
 }
 
 function clearItemForm() {
@@ -160,12 +163,7 @@ function showFeedback(element, message, isSuccess = false) {
   element.style.color = isSuccess ? '#15803d' : 'var(--danger)';
 }
 
-function findUser(username) {
-  const users = getUsers();
-  return users.find((user) => user.username === username);
-}
-
-function handleRegister() {
+async function handleRegister() {
   const username = registerUsername.value.trim();
   const password = registerPassword.value;
   const confirm = registerPasswordConfirm.value;
@@ -180,23 +178,22 @@ function handleRegister() {
     return;
   }
 
-  if (findUser(username)) {
-    showFeedback(registerFeedback, 'มีชื่อผู้ใช้นี้แล้ว กรุณาเลือกชื่ออื่น');
-    return;
+  try {
+    await apiRequest('/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+    showFeedback(registerFeedback, 'สมัครสมาชิกสำเร็จ! สามารถเข้าสู่ระบบได้', true);
+    registerUsername.value = '';
+    registerPassword.value = '';
+    registerPasswordConfirm.value = '';
+    switchTab('login');
+  } catch (err) {
+    showFeedback(registerFeedback, err.message);
   }
-
-  const users = getUsers();
-  users.push({ username, password });
-  saveUsers(users);
-  localStorage.setItem(`stockManagerData_${username}`, JSON.stringify([]));
-  showFeedback(registerFeedback, 'สมัครสมาชิกสำเร็จ! สามารถเข้าสู่ระบบได้', true);
-  registerUsername.value = '';
-  registerPassword.value = '';
-  registerPasswordConfirm.value = '';
-  switchTab('login');
 }
 
-function handleLogin() {
+async function handleLogin() {
   const username = loginUsername.value.trim();
   const password = loginPassword.value;
 
@@ -205,27 +202,26 @@ function handleLogin() {
     return;
   }
 
-  const user = findUser(username);
-  if (!user || user.password !== password) {
-    showFeedback(loginFeedback, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-    return;
+  try {
+    const data = await apiRequest('/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+    setToken(data.token);
+    loginUsername.value = '';
+    loginPassword.value = '';
+    showStockView(data.user);
+  } catch (err) {
+    showFeedback(loginFeedback, err.message);
   }
-
-  setCurrentUser(username);
-  loginUsername.value = '';
-  loginPassword.value = '';
-  showStockView();
 }
 
 function handleLogout() {
-  setCurrentUser(null);
+  removeToken();
   showAuthView();
 }
 
-function handleSaveItem() {
-  const currentUser = getCurrentUser();
-  if (!currentUser) return;
-
+async function handleSaveItem() {
   const name = productName.value.trim();
   const quantity = Number(productQty.value);
   const price = Number(productPrice.value);
@@ -236,60 +232,59 @@ function handleSaveItem() {
     return;
   }
 
-  const inventory = getInventory(currentUser);
-
-  if (editingItemId) {
-    const itemIndex = inventory.findIndex((item) => item.id === editingItemId);
-    if (itemIndex !== -1) {
-      inventory[itemIndex] = {
-        ...inventory[itemIndex],
-        name,
-        quantity,
-        price,
-        category,
-      };
+  try {
+    if (editingItemId) {
+      await apiRequest(`/products/${editingItemId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, quantity, price, category }),
+      });
       showFeedback(itemFeedback, 'แก้ไขสินค้าเรียบร้อย', true);
+    } else {
+      await apiRequest('/products', {
+        method: 'POST',
+        body: JSON.stringify({ name, quantity, price, category }),
+      });
+      showFeedback(itemFeedback, 'เพิ่มสินค้าเรียบร้อย', true);
     }
-  } else {
-    inventory.push({
-      id: `item_${Date.now()}`,
-      name,
-      quantity,
-      price,
-      category,
-    });
-    showFeedback(itemFeedback, 'เพิ่มสินค้าเรียบร้อย', true);
+    renderInventory();
+    clearItemForm();
+  } catch (err) {
+    showFeedback(itemFeedback, err.message);
   }
-
-  saveInventory(currentUser, inventory);
-  renderInventory();
-  clearItemForm();
 }
 
-function handleInventoryClick(event) {
+async function handleInventoryClick(event) {
   const button = event.target.closest('button');
   if (!button) return;
   const id = button.dataset.id;
-  const currentUser = getCurrentUser();
-  const inventory = getInventory(currentUser);
 
   if (button.classList.contains('edit')) {
-    const item = inventory.find((product) => product.id === id);
-    if (!item) return;
-    editingItemId = item.id;
-    productName.value = item.name;
-    productQty.value = item.quantity;
-    productPrice.value = item.price;
-    productCategory.value = item.category;
-    saveItemBtn.textContent = 'บันทึกการแก้ไข';
-    cancelEditBtn.classList.remove('hidden');
-    itemFeedback.textContent = '';
+    try {
+      const products = await apiRequest('/products');
+      const item = products.find((product) => product._id === id);
+      if (!item) return;
+      editingItemId = item._id;
+      productName.value = item.name;
+      productQty.value = item.quantity;
+      productPrice.value = item.price;
+      productCategory.value = item.category;
+      saveItemBtn.textContent = 'บันทึกการแก้ไข';
+      cancelEditBtn.classList.remove('hidden');
+      itemFeedback.textContent = '';
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   if (button.classList.contains('delete')) {
-    const updated = inventory.filter((product) => product.id !== id);
-    saveInventory(currentUser, updated);
-    renderInventory();
+    try {
+      await apiRequest(`/products/${id}`, {
+        method: 'DELETE',
+      });
+      renderInventory();
+    } catch (err) {
+      console.error(err);
+    }
   }
 }
 
@@ -305,9 +300,11 @@ themeToggleBtn?.addEventListener('click', toggleTheme);
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(getTheme());
-  const currentUser = getCurrentUser();
-  if (currentUser) {
-    showStockView();
+  const token = getToken();
+  if (token) {
+    // Optionally verify token, but for simplicity, assume it's valid
+    // You might want to add a /me endpoint to get user info
+    showStockView({ username: 'User' }); // Placeholder, replace with actual user data
   } else {
     showAuthView();
   }
