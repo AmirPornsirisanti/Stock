@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบจัดการสต็อกสินค้า</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <h1>Stock Manager</h1>
+      <p>สมัครสมาชิก / เข้าสู่ระบบก่อนเข้าใช้งาน</p>
+    </header>
+
+    <main>
+      <section id="authSection" class="card">
+        <div class="tabs">
+          <button id="loginTab" class="tab active">เข้าสู่ระบบ</button>
+          <button id="registerTab" class="tab">สมัครสมาชิก</button>
+        </div>
+
+        <div id="loginForm" class="form-panel">
+          <h2>เข้าสู่ระบบ</h2>
+          <label>ชื่อผู้ใช้</label>
+          <input id="loginUsername" type="text" placeholder="ใส่ชื่อผู้ใช้" />
+          <label>รหัสผ่าน</label>
+          <input id="loginPassword" type="password" placeholder="ใส่รหัสผ่าน" />
+          <button id="loginBtn" class="primary-btn">เข้าสู่ระบบ</button>
+          <p id="loginFeedback" class="feedback"></p>
+        </div>
+
+        <div id="registerForm" class="form-panel hidden">
+          <h2>สมัครสมาชิก</h2>
+          <label>ชื่อผู้ใช้</label>
+          <input id="registerUsername" type="text" placeholder="ใส่ชื่อผู้ใช้" />
+          <label>รหัสผ่าน</label>
+          <input id="registerPassword" type="password" placeholder="ใส่รหัสผ่าน" />
+          <label>ยืนยันรหัสผ่าน</label>
+          <input id="registerPasswordConfirm" type="password" placeholder="ยืนยันรหัสผ่าน" />
+          <button id="registerBtn" class="primary-btn">สมัครสมาชิก</button>
+          <p id="registerFeedback" class="feedback"></p>
+        </div>
+      </section>
+
+      <section id="stockSection" class="card hidden">
+        <div class="stock-header">
+          <div>
+            <h2>หน้าจัดการสต็อกสินค้า</h2>
+            <p id="welcomeUser"></p>
+          </div>
+          <button id="logoutBtn" class="secondary-btn">ออกจากระบบ</button>
+        </div>
+
+        <div class="stock-actions">
+          <div class="add-item-panel">
+            <h3>เพิ่ม / แก้ไขสินค้า</h3>
+            <label>ชื่อสินค้า</label>
+            <input id="productName" type="text" placeholder="ชื่อสินค้า" />
+            <label>จำนวน</label>
+            <input id="productQty" type="number" min="0" placeholder="จำนวน" />
+            <label>ราคา</label>
+            <input id="productPrice" type="number" min="0" placeholder="ราคา" />
+            <label>ประเภท</label>
+            <input id="productCategory" type="text" placeholder="ประเภทสินค้า" />
+            <div class="form-buttons">
+              <button id="saveItemBtn" class="primary-btn">บันทึกสินค้า</button>
+              <button id="cancelEditBtn" class="secondary-btn hidden">ยกเลิก</button>
+            </div>
+            <p id="itemFeedback" class="feedback"></p>
+          </div>
+
+          <div class="inventory-panel">
+            <h3>รายการสต็อก</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>สินค้า</th>
+                  <th>จำนวน</th>
+                  <th>ราคา</th>
+                  <th>ประเภท</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        <a href="https://github.com/AmirPornsirisanti/Stock.git" target="_blank">
+          GitHub Repository
+        </a>
+      </p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
