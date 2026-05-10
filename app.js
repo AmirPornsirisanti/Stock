@@ -26,11 +26,13 @@ const productCategory = document.getElementById('productCategory');
 const saveItemBtn = document.getElementById('saveItemBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const itemFeedback = document.getElementById('itemFeedback');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 
 let editingItemId = null;
 
 const USERS_KEY = 'stockManagerUsers';
 const CURRENT_USER_KEY = 'stockManagerCurrentUser';
+const THEME_KEY = 'stockManagerTheme';
 
 function getUsers() {
   const stored = localStorage.getItem(USERS_KEY);
@@ -51,6 +53,26 @@ function setCurrentUser(username) {
   } else {
     localStorage.removeItem(CURRENT_USER_KEY);
   }
+}
+
+function getTheme() {
+  return localStorage.getItem(THEME_KEY) || 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  if (themeToggleBtn) {
+    themeToggleBtn.textContent = theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด';
+  }
+}
+
+function setTheme(theme) {
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme(theme);
+}
+
+function toggleTheme() {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
 }
 
 function getInventory(username) {
@@ -279,8 +301,10 @@ logoutBtn.addEventListener('click', handleLogout);
 saveItemBtn.addEventListener('click', handleSaveItem);
 cancelEditBtn.addEventListener('click', clearItemForm);
 inventoryBody.addEventListener('click', handleInventoryClick);
+themeToggleBtn?.addEventListener('click', toggleTheme);
 
-window.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(getTheme());
   const currentUser = getCurrentUser();
   if (currentUser) {
     showStockView();

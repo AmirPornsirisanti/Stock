@@ -1,12 +1,37 @@
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
   --primary: #286ef4;
   --primary-dark: #1f54c7;
   --text: #1f2937;
   --muted: #6b7280;
   --danger: #dc2626;
   --border: #d1d5db;
+  --shadow: rgba(15, 23, 42, 0.08);
+  --footer-bg: rgba(255, 255, 255, 0.7);
+  --tab-bg: #f9fbff;
+  --panel-bg: #f9fbff;
+}
+
+[data-theme="dark"] {
+  --bg: #111827;
+  --surface: #1f2937;
+  --card-bg: #111827;
+  --input-bg: #1f2937;
+  --input-border: #334155;
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+  --danger: #fca5a5;
+  --border: #334155;
+  --shadow: rgba(0, 0, 0, 0.6);
+  --footer-bg: rgba(31, 41, 55, 0.8);
+  --tab-bg: rgba(255, 255, 255, 0.08);
+  --panel-bg: rgba(255, 255, 255, 0.04);
 }
 
 * {
@@ -16,7 +41,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: radial-gradient(circle at top, #eef4ff 0%, var(--bg) 50%);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.3) 0%, var(--bg) 50%);
   color: var(--text);
 }
 
@@ -27,8 +52,15 @@ body {
 }
 
 header {
-  text-align: center;
   margin-bottom: 18px;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 header h1 {
@@ -37,16 +69,20 @@ header h1 {
 }
 
 header p {
-  margin: 8px auto 0;
+  margin: 8px 0 0;
   color: var(--muted);
 }
 
+.theme-toggle-btn {
+  min-width: 140px;
+}
+
 .card {
-  background: var(--surface);
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 24px;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 44px var(--shadow);
 }
 
 .tabs {
@@ -61,7 +97,7 @@ header p {
   border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
-  background: #f9fbff;
+  background: var(--tab-bg);
   color: var(--text);
   transition: all 0.2s ease;
 }
@@ -88,6 +124,7 @@ input {
   border: 1px solid var(--border);
   border-radius: 12px;
   outline: none;
+  background: var(--input-bg);
   transition: border-color 0.2s ease;
 }
 
@@ -136,9 +173,9 @@ button {
   gap: 24px;
 }
 
-.add-item-panel,
+..add-item-panel,
 .inventory-panel {
-  background: #f9fbff;
+  background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px;
