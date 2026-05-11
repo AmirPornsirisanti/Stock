@@ -1,9 +1,9 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 dotenv.config();
 
@@ -11,31 +11,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.log(err));
+const PORT = process.env.PORT || 5000;
 
-// User Schema
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-});
+// In-memory storage
+let users = [];
+let products = [];
 
-const User = mongoose.model('User', userSchema);
-
-// Product Schema
-const productSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  quantity: { type: Number, required: true },
-  price: { type: Number, required: true },
-  category: { type: String, required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-});
-
-const Product = mongoose.model('Product', productSchema);
+// Start server
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Middleware to verify JWT
 const verifyToken = (req, res, next) => {
@@ -43,7 +26,7 @@ const verifyToken = (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Access denied' });
 
   try {
-    const verified = jwt.verify(token, 'secretkey');
+    const verified = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
     req.user = verified;
     next();
   } catch (err) {
@@ -54,56 +37,54 @@ const verifyToken = (req, res, next) => {
 // Routes
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
+  const existingUser = users.find(u => u.username === username);
+  if (existingUser) return res.status(400).json({ message: 'User already exists' });
+
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  const user = new User({ username, password: hashedPassword });
-  try {
-    await user.save();
-    res.json({ message: 'User registered' });
-  } catch (err) {
-    res.status(400).json({ message: 'User already exists' });
-  }
+  const user = { id: crypto.randomUUID(), username, password: hashedPassword };
+  users.push(user);
+  res.json({ message: 'User registered' });
 });
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username });
+  const user = users.find(u => u.username === username);
   if (!user) return res.status(400).json({ message: 'User not found' });
 
   const validPass = await bcrypt.compare(password, user.password);
   if (!validPass) return res.status(400).json({ message: 'Invalid password' });
 
-  const token = jwt.sign({ _id: user._id }, 'secretkey');
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'secretkey');
   res.json({ token, user: { username } });
 });
 
-app.get('/api/products', verifyToken, async (req, res) => {
-  const products = await Product.find({ userId: req.user._id });
-  res.json(products);
+app.get('/api/products', verifyToken, (req, res) => {
+  const userProducts = products.filter(p => p.userId === req.user.id);
+  res.json(userProducts);
 });
 
-app.post('/api/products', verifyToken, async (req, res) => {
+app.post('/api/products', verifyToken, (req, res) => {
   const { name, quantity, price, category } = req.body;
-  const product = new Product({ name, quantity, price, category, userId: req.user._id });
-  await product.save();
+  const product = { id: crypto.randomUUID(), name, quantity, price, category, userId: req.user.id };
+  products.push(product);
   res.json(product);
 });
 
-app.put('/api/products/:id', verifyToken, async (req, res) => {
+app.put('/api/products/:id', verifyToken, (req, res) => {
   const { name, quantity, price, category } = req.body;
-  const product = await Product.findOneAndUpdate(
-    { _id: req.params.id, userId: req.user._id },
-    { name, quantity, price, category },
-    { new: true }
-  );
-  res.json(product);
+  const productIndex = products.findIndex(p => p.id === req.params.id && p.userId === req.user.id);
+  if (productIndex === -1) return res.status(404).json({ message: 'Product not found' });
+
+  products[productIndex] = { ...products[productIndex], name, quantity, price, category };
+  res.json(products[productIndex]);
 });
 
 app.delete('/api/products/:id', verifyToken, async (req, res) => {
-  await Product.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  const productIndex = products.findIndex(p => p.id === req.params.id && p.userId === req.user.id);
+  if (productIndex === -1) return res.status(404).json({ message: 'Product not found' });
+
+  products.splice(productIndex, 1);
   res.json({ message: 'Product deleted' });
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
