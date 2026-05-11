@@ -198,6 +198,10 @@ table {
   border-collapse: collapse;
 }
 
+.table-container {
+  overflow-x: auto;
+}
+
 thead th {
   text-align: left;
   padding: 14px 12px;
@@ -253,5 +257,94 @@ footer a:hover {
 @media (min-width: 900px) {
   .stock-actions {
     grid-template-columns: 360px 1fr;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  .app-shell {
+    margin: 12px auto;
+    padding: 0 8px 16px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+  }
+
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .theme-toggle-btn {
+    align-self: flex-end;
+    min-width: auto;
+    padding: 8px 12px;
+  }
+
+  .tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tab {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .form-panel {
+    gap: 10px;
+  }
+
+  input {
+    padding: 10px 12px;
+  }
+
+  button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .form-buttons button {
+    width: 100%;
+  }
+
+  .stock-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .stock-actions {
+    gap: 16px;
+  }
+
+  .add-item-panel,
+  .inventory-panel {
+    padding: 12px;
+  }
+
+  table {
+    font-size: 0.85rem;
+  }
+
+  thead th,
+  td {
+    padding: 8px 6px;
+  }
+
+  td button {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+
+  footer {
+    margin-top: 20px;
+    padding-top: 12px;
   }
 }
