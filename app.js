@@ -1,12 +1,9 @@
 const API_BASE = 'http://localhost:5000/api';
 
-const loginTab = document.getElementById('loginTab');
-const registerTab = document.getElementById('registerTab');
+// Auth Elements
+const authSection = document.getElementById('authSection');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
-const authSection = document.getElementById('authSection');
-const stockSection = document.getElementById('stockSection');
-const welcomeUser = document.getElementById('welcomeUser');
 
 const loginUsername = document.getElementById('loginUsername');
 const loginPassword = document.getElementById('loginPassword');
@@ -19,8 +16,19 @@ const registerPasswordConfirm = document.getElementById('registerPasswordConfirm
 const registerBtn = document.getElementById('registerBtn');
 const registerFeedback = document.getElementById('registerFeedback');
 
+const toggleAuthBtn = document.getElementById('toggleAuthBtn');
+const authTitle = document.getElementById('authTitle');
+const authSubtitle = document.getElementById('authSubtitle');
+const authToggleText = document.getElementById('authToggleText');
+
+// Stock Elements
+const stockSection = document.getElementById('stockSection');
+const welcomeUser = document.getElementById('welcomeUser');
 const logoutBtn = document.getElementById('logoutBtn');
 const inventoryBody = document.getElementById('inventoryBody');
+const itemCountDisplay = document.getElementById('itemCountDisplay');
+const emptyState = document.getElementById('emptyState');
+
 const productName = document.getElementById('productName');
 const productQty = document.getElementById('productQty');
 const productPrice = document.getElementById('productPrice');
@@ -28,9 +36,16 @@ const productCategory = document.getElementById('productCategory');
 const saveItemBtn = document.getElementById('saveItemBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const itemFeedback = document.getElementById('itemFeedback');
+
+// Stats Elements
+const totalItems = document.getElementById('totalItems');
+const totalValue = document.getElementById('totalValue');
+
+// Theme
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 
 let editingItemId = null;
+let isLoginMode = true;
 
 const TOKEN_KEY = 'stockManagerToken';
 const THEME_KEY = 'stockManagerTheme';
@@ -87,34 +102,53 @@ async function apiRequest(url, options = {}) {
   return data;
 }
 
-function switchTab(activeTab) {
-  if (activeTab === 'login') {
-    loginTab.classList.add('active');
-    registerTab.classList.remove('active');
+function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  
+  if (isLoginMode) {
+    authTitle.textContent = 'เข้าสู่ระบบ';
+    authSubtitle.textContent = 'ใส่ข้อมูลการเข้าสู่ระบบของคุณ';
     loginForm.classList.remove('hidden');
     registerForm.classList.add('hidden');
+    authToggleText.innerHTML = 'ยังไม่มีบัญชี? <button id="toggleAuthBtn" class="link-btn">สมัครสมาชิกที่นี่</button>';
   } else {
-    registerTab.classList.add('active');
-    loginTab.classList.remove('active');
+    authTitle.textContent = 'สมัครสมาชิก';
+    authSubtitle.textContent = 'สร้างบัญชีใหม่เพื่อเข้าใช้งาน';
     registerForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
+    authToggleText.innerHTML = 'มีบัญชีอยู่แล้ว? <button id="toggleAuthBtn" class="link-btn">เข้าสู่ระบบที่นี่</button>';
   }
+  
+  // Re-attach listener to the new button
+  document.getElementById('toggleAuthBtn').addEventListener('click', toggleAuthMode);
 }
 
 function showStockView(user) {
   authSection.classList.add('hidden');
   stockSection.classList.remove('hidden');
-  welcomeUser.textContent = `ยินดีต้อนรับ ${user.username}`;
+  welcomeUser.textContent = `ยินดีต้อนรับ, ${user.username}`;
   renderInventory();
 }
 
 function showAuthView() {
   authSection.classList.remove('hidden');
   stockSection.classList.add('hidden');
-  loginFeedback.textContent = '';
-  registerFeedback.textContent = '';
-  itemFeedback.textContent = '';
-  clearItemForm();
+  clearAuthForm();
+  isLoginMode = true;
+  authTitle.textContent = 'เข้าสู่ระบบ';
+  authSubtitle.textContent = 'ใส่ข้อมูลการเข้าสู่ระบบของคุณ';
+  loginForm.classList.remove('hidden');
+  registerForm.classList.add('hidden');
+}
+
+function clearAuthForm() {
+  loginUsername.value = '';
+  loginPassword.value = '';
+  registerUsername.value = '';
+  registerPassword.value = '';
+  registerPasswordConfirm.value = '';
+  hideFeedback(loginFeedback);
+  hideFeedback(registerFeedback);
 }
 
 async function renderInventory() {
@@ -123,27 +157,42 @@ async function renderInventory() {
     inventoryBody.innerHTML = '';
 
     if (products.length === 0) {
-      inventoryBody.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">ยังไม่มีสินค้าคงคลัง</td></tr>';
+      inventoryBody.parentElement.parentElement.querySelector('.table-wrapper').style.display = 'none';
+      emptyState.classList.remove('hidden');
+      itemCountDisplay.textContent = 'ทั้งหมด 0 รายการ';
+      totalItems.textContent = '0';
+      totalValue.textContent = '0';
       return;
     }
 
+    inventoryBody.parentElement.parentElement.querySelector('.table-wrapper').style.display = 'block';
+    emptyState.classList.add('hidden');
+
+    let totalValueAmount = 0;
     products.forEach((item) => {
+      const value = item.quantity * item.price;
+      totalValueAmount += value;
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${item.name}</td>
+        <td>${item.category}</td>
         <td>${item.quantity}</td>
         <td>${item.price.toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}</td>
-        <td>${item.category}</td>
+        <td>${value.toLocaleString('th-TH', { style: 'currency', currency: 'THB' })}</td>
         <td>
-          <button class="edit" data-id="${item._id}">แก้ไข</button>
-          <button class="delete" data-id="${item._id}">ลบ</button>
+          <button class="edit-btn" data-id="${item._id}">แก้ไข</button>
+          <button class="delete-btn" data-id="${item._id}">ลบ</button>
         </td>
       `;
       inventoryBody.appendChild(row);
     });
+
+    itemCountDisplay.textContent = `ทั้งหมด ${products.length} รายการ`;
+    totalItems.textContent = products.length;
+    totalValue.textContent = totalValueAmount.toLocaleString('th-TH', { style: 'currency', currency: 'THB' });
   } catch (err) {
     console.error(err);
-    inventoryBody.innerHTML = '<tr><td colspan="5" style="color: var(--error);">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    showFeedback(itemFeedback, 'เกิดข้อผิดพลาดในการโหลดข้อมูล', false);
   }
 }
 
@@ -155,12 +204,26 @@ function clearItemForm() {
   productCategory.value = '';
   saveItemBtn.textContent = 'บันทึกสินค้า';
   cancelEditBtn.classList.add('hidden');
-  itemFeedback.textContent = '';
+  hideFeedback(itemFeedback);
 }
 
 function showFeedback(element, message, isSuccess = false) {
+  element.classList.remove('hidden');
+  element.classList.remove('error', 'success');
+  element.classList.add('show');
+  element.classList.add(isSuccess ? 'success' : 'error');
   element.textContent = message;
-  element.style.color = isSuccess ? '#15803d' : 'var(--danger)';
+  
+  setTimeout(() => {
+    element.classList.add('hidden');
+    element.classList.remove('show');
+  }, 5000);
+}
+
+function hideFeedback(element) {
+  element.classList.add('hidden');
+  element.classList.remove('show');
+  element.textContent = '';
 }
 
 async function handleRegister() {
@@ -169,12 +232,12 @@ async function handleRegister() {
   const confirm = registerPasswordConfirm.value;
 
   if (!username || !password || !confirm) {
-    showFeedback(registerFeedback, 'กรุณากรอกข้อมูลให้ครบทุกช่อง');
+    showFeedback(registerFeedback, 'กรุณากรอกข้อมูลให้ครบทุกช่อง', false);
     return;
   }
 
   if (password !== confirm) {
-    showFeedback(registerFeedback, 'รหัสผ่านไม่ตรงกัน');
+    showFeedback(registerFeedback, 'รหัสผ่านไม่ตรงกัน', false);
     return;
   }
 
@@ -184,12 +247,11 @@ async function handleRegister() {
       body: JSON.stringify({ username, password }),
     });
     showFeedback(registerFeedback, 'สมัครสมาชิกสำเร็จ! สามารถเข้าสู่ระบบได้', true);
-    registerUsername.value = '';
-    registerPassword.value = '';
-    registerPasswordConfirm.value = '';
-    switchTab('login');
+    setTimeout(() => {
+      toggleAuthMode();
+    }, 1500);
   } catch (err) {
-    showFeedback(registerFeedback, err.message);
+    showFeedback(registerFeedback, err.message, false);
   }
 }
 
@@ -198,7 +260,7 @@ async function handleLogin() {
   const password = loginPassword.value;
 
   if (!username || !password) {
-    showFeedback(loginFeedback, 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+    showFeedback(loginFeedback, 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', false);
     return;
   }
 
@@ -208,11 +270,10 @@ async function handleLogin() {
       body: JSON.stringify({ username, password }),
     });
     setToken(data.token);
-    loginUsername.value = '';
-    loginPassword.value = '';
+    clearAuthForm();
     showStockView(data.user);
   } catch (err) {
-    showFeedback(loginFeedback, err.message);
+    showFeedback(loginFeedback, err.message, false);
   }
 }
 
@@ -228,7 +289,7 @@ async function handleSaveItem() {
   const category = productCategory.value.trim();
 
   if (!name || isNaN(quantity) || quantity < 0 || isNaN(price) || price < 0 || !category) {
-    showFeedback(itemFeedback, 'กรุณากรอกข้อมูลสินค้าให้ครบและถูกต้อง');
+    showFeedback(itemFeedback, 'กรุณากรอกข้อมูลสินค้าให้ครบและถูกต้อง', false);
     return;
   }
 
@@ -249,7 +310,7 @@ async function handleSaveItem() {
     renderInventory();
     clearItemForm();
   } catch (err) {
-    showFeedback(itemFeedback, err.message);
+    showFeedback(itemFeedback, err.message, false);
   }
 }
 
@@ -258,7 +319,7 @@ async function handleInventoryClick(event) {
   if (!button) return;
   const id = button.dataset.id;
 
-  if (button.classList.contains('edit')) {
+  if (button.classList.contains('edit-btn')) {
     try {
       const products = await apiRequest('/products');
       const item = products.find((product) => product._id === id);
@@ -270,26 +331,28 @@ async function handleInventoryClick(event) {
       productCategory.value = item.category;
       saveItemBtn.textContent = 'บันทึกการแก้ไข';
       cancelEditBtn.classList.remove('hidden');
-      itemFeedback.textContent = '';
+      hideFeedback(itemFeedback);
     } catch (err) {
       console.error(err);
     }
   }
 
-  if (button.classList.contains('delete')) {
-    try {
-      await apiRequest(`/products/${id}`, {
-        method: 'DELETE',
-      });
-      renderInventory();
-    } catch (err) {
-      console.error(err);
+  if (button.classList.contains('delete-btn')) {
+    if (confirm('คุณต้องการลบสินค้านี้หรือไม่?')) {
+      try {
+        await apiRequest(`/products/${id}`, {
+          method: 'DELETE',
+        });
+        showFeedback(itemFeedback, 'ลบสินค้าเรียบร้อย', true);
+        renderInventory();
+      } catch (err) {
+        showFeedback(itemFeedback, err.message, false);
+      }
     }
   }
 }
 
-loginTab.addEventListener('click', () => switchTab('login'));
-registerTab.addEventListener('click', () => switchTab('register'));
+// Event Listeners
 registerBtn.addEventListener('click', handleRegister);
 loginBtn.addEventListener('click', handleLogin);
 logoutBtn.addEventListener('click', handleLogout);
@@ -297,14 +360,13 @@ saveItemBtn.addEventListener('click', handleSaveItem);
 cancelEditBtn.addEventListener('click', clearItemForm);
 inventoryBody.addEventListener('click', handleInventoryClick);
 themeToggleBtn?.addEventListener('click', toggleTheme);
+toggleAuthBtn?.addEventListener('click', toggleAuthMode);
 
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(getTheme());
   const token = getToken();
   if (token) {
-    // Optionally verify token, but for simplicity, assume it's valid
-    // You might want to add a /me endpoint to get user info
-    showStockView({ username: 'User' }); // Placeholder, replace with actual user data
+    showStockView({ username: 'User' });
   } else {
     showAuthView();
   }
